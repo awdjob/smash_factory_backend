@@ -1,0 +1,14 @@
+{
+  "name": "smash_factory_backend",
+  "version": "1.0.0",
+  "description": "Server for conusming twitch webhooks and relaying them to smash_factory clients",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Johnny Chewnami",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}
