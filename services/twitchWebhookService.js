@@ -1,11 +1,5 @@
 const Token = require('../models/token');
 
-const getTierFromRewardTitle = (rewardTitle) => {
-  // Example: "SF Tier 1" → 1
-  const match = rewardTitle.match(/Tier (\d+)/i);
-  return match ? parseInt(match[1], 10) : null;
-}
-
 module.exports = {
   handleChannelPointRedemption: async (req, res) => {
     try {
@@ -14,9 +8,7 @@ module.exports = {
       const userId = event.user_id;
       const streamerId = event.broadcaster_user_id;
 
-      const tier = getTierFromRewardTitle(rewardTitle);
-
-      if (!tier) {
+      if (rewardTitle !== "Smash Factory Token") {
         return res.status(400).send('Invalid reward title');
       }
 
@@ -38,10 +30,9 @@ module.exports = {
         platform: "twitch",
         source: "channel_points",
         sourceEventId: event.id,
-        tier,
       });
 
-      return res.status(200).json({ success: true, tier });
+      return res.status(200).json();
     } catch (err) {
       console.error('Error handling channel point redemption:', err);
       return res.status(500).send('Internal server error');
@@ -53,9 +44,7 @@ module.exports = {
       const userId = event.user_id;
       const streamerId = event.broadcaster_user_id;
 
-      const tier = getTierFromRewardTitle(event.product.name);
-
-      if (!tier) {
+      if (event.product.name !== "Smash Factory Token") {
         return res.status(400).send('Invalid reward title');
       }
 
@@ -65,7 +54,6 @@ module.exports = {
         platform: "twitch",
         source: "bits",
         sourceEventId: event.id,
-        tier
       });
 
       if (existingToken) {
@@ -78,10 +66,9 @@ module.exports = {
         platform: "twitch",
         source: "bits",
         sourceEventId: event.id,
-        tier
       });
 
-      return res.status(200).json({ success: true, tier }); 
+      return res.status(200).json(); 
     } catch (err) {
       console.error('Error handling bits transaction create:', err);
       return res.status(500).send('Internal server error');
