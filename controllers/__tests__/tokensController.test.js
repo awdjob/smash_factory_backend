@@ -39,7 +39,7 @@ describe('TokensController', () => {
             streamerId: '67890',
             platform: "twitch",
             source: "channel_points",
-            tier: 1,
+            sourceEventId: "12345",
             redeemedAt: null
         })
 
@@ -50,7 +50,6 @@ describe('TokensController', () => {
 
         expect(response.status).toBe(200);
         expect(response.body.length).toBe(1);
-        expect(response.body[0].tier).toBe(1);
         expect(response.body[0].streamerId).toBe('67890');
         expect(response.body[0].redeemedAt).toBeNull();
     })
