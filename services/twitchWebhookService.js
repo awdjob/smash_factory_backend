@@ -8,11 +8,15 @@ module.exports = {
       const userId = event.user_id;
       const streamerId = event.broadcaster_user_id;
 
-      if (rewardTitle !== "Smash Factory Token") {
+      // Extract the amount from the title (e.g., "5 Smash Factory Tokens")
+      const match = rewardTitle.match(/^([0-9]+) Smash Factory Token(s)?/);
+      const tokenAmount = match ? parseInt(match[1], 10) : null;
+
+      if (!tokenAmount) {
         return res.status(400).send('Invalid reward title');
       }
 
-      const existingToken = await Token.findOne({
+      const existingTokens = await Token.countDocuments({
         viewerId: userId,
         streamerId,
         platform: "twitch",
@@ -20,17 +24,22 @@ module.exports = {
         sourceEventId: event.id,
       });
 
-      if (existingToken) {
+      if (existingTokens >= tokenAmount) {
+        // Already have enough tokens for this event
         return res.status(200).json();
       }
 
-      await Token.create({
+      // Create only the missing tokens
+      const tokensToCreate = tokenAmount - existingTokens;
+      const tokens = Array.from({ length: tokensToCreate }).map(() => ({
         viewerId: userId,
         streamerId,
         platform: "twitch",
         source: "channel_points",
         sourceEventId: event.id,
-      });
+      }));
+
+      await Token.insertMany(tokens);
 
       return res.status(200).json();
     } catch (err) {
@@ -39,16 +48,23 @@ module.exports = {
     }
   },
   handleBitsTransactionCreate: async (req, res) => {
+    const getTokenAmountFromSku = (sku) => {
+      const match = sku.match(/sf_token_(\d+)/);
+      return match ? parseInt(match[1], 10) : 1;
+    }
+
     try {
       const event = req.body.event;
       const userId = event.user_id;
       const streamerId = event.broadcaster_user_id;
 
-      if (event.product.name !== "Smash Factory Token") {
+      if (!event.product.sku.match(/sf_token_(\d+)/)) {
         return res.status(400).send('Invalid reward title');
       }
 
-      const existingToken = await Token.findOne({
+      const tokenAmount = getTokenAmountFromSku(event.product.sku);
+
+      const existingTokens = await Token.countDocuments({
         viewerId: userId,
         streamerId,
         platform: "twitch",
@@ -56,19 +72,24 @@ module.exports = {
         sourceEventId: event.id,
       });
 
-      if (existingToken) {
+      if (existingTokens >= tokenAmount) {
+        // Already have enough tokens for this event
         return res.status(200).json();
       }
 
-      await Token.create({  
+      // Create only the missing tokens
+      const tokensToCreate = tokenAmount - existingTokens;
+      const tokens = Array.from({ length: tokensToCreate }).map(() => ({
         viewerId: userId,
         streamerId,
         platform: "twitch",
         source: "bits",
         sourceEventId: event.id,
-      });
+      }));
 
-      return res.status(200).json(); 
+      await Token.insertMany(tokens);
+
+      return res.status(200).json();
     } catch (err) {
       console.error('Error handling bits transaction create:', err);
       return res.status(500).send('Internal server error');

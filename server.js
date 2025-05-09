@@ -1,4 +1,3 @@
-require('dotenv').config();
 const axios = require('axios');
 const express = require('express');
 const cors = require('cors');
@@ -8,6 +7,7 @@ const { getCurrentViewer } = require('./middlewares/viewerAuth');
 const tokensController = require('./controllers/tokensController');
 const twitchWebhookController = require('./controllers/twitchWebhookController');
 const { broadcastEvent, addClient, removeClient } = require('./services/eventService');
+const Streamer = require('./models/streamer');
 
 const app = express();
 app.use(cors());
@@ -15,15 +15,22 @@ app.use(bodyParser.json());
 app.use(authMiddleware);
 
 app.get('/tokens', tokensController.get);
+app.post('/redeem', tokensController.redeem);
 
 // SSE endpoint for real-time updates
-app.get('/events', (req, res) => {
+app.get('/events', async (req, res) => {
   // Set headers for SSE
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     'Connection': 'keep-alive'
   });
+
+  const { streamerId } = req.query
+
+  const streamer = await Streamer.findOne({ "twitchProfile.id": streamerId });
+
+  const channelId = streamer.channelId;
 
   // Add client to connected clients
   addClient(channelId, res);
