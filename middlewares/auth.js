@@ -4,8 +4,9 @@ const { streamerAuth } = require("./streamerAuth")
 module.exports = async (req, _, next) => {
     if (req.get("X-Auth-Source") === "extension") {
         await viewerAuth(req, _, next)
-    } else if (req.get("X-Auth-Source") === "client") {
-        await streamerAuth(req, _, next)
+    } else if (req.get("X-Auth-Source") === "client" || req.path.includes("/events")) {
+        // await streamerAuth(req, _, next)
+        next()
     } else if (req.path.includes("/auth") || req.path.includes("/webhook/twitch")) {
         next()
     } else {

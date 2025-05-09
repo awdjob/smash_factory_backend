@@ -25,7 +25,7 @@
         "user_id": "1236",
         "product": {
             "name": "Smash Factory Token",
-            "sku": "skuskusku",
+            "sku": "sf_token",
             "bits": 1234,
             "in_development": false
         }

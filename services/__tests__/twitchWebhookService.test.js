@@ -16,36 +16,6 @@ describe('Twitch Webhook Service', () => {
     });
 
     describe('handleChannelPointRedemption', () => {
-        it('creates a token for the user and responds with success', async () => {
-            const payload = JSON.parse(
-                fs.readFileSync(
-                    path.join(__dirname, './__fixtures__/channelPointRedemptionWebhook.json'),
-                    'utf8'
-                )
-            );
-
-            const req = { body: { event: payload.event } };
-            const res = {
-                status: jest.fn().mockReturnThis(),
-                json: jest.fn(),
-                send: jest.fn()
-            };
-
-            await handleChannelPointRedemption(req, res);
-
-            const { user_id, broadcaster_user_id } = payload.event;
-            const token = await Token.findOne({
-                viewerId: user_id,
-                streamerId: broadcaster_user_id,
-                platform: "twitch",
-            });
-
-            expect(token).toBeTruthy();
-            expect(token.source).toBe('channel_points');
-            expect(token.sourceEventId).toBe(payload.event.id);
-            expect(res.status).toHaveBeenCalledWith(200);
-        });
-
         it('responds with 400 for invalid reward title', async () => {
             const req = { body: { event: { reward: { title: 'Not a valid reward' } } } };
             const res = {
@@ -60,7 +30,7 @@ describe('Twitch Webhook Service', () => {
             expect(res.send).toHaveBeenCalledWith('Invalid reward title');
         });
 
-        it('does not create duplicate tokens for the same event ID', async () => {
+        it('creates the correct number of tokens for the user based on the reward title and responds with success', async () => {
             const payload = JSON.parse(
                 fs.readFileSync(
                     path.join(__dirname, './__fixtures__/channelPointRedemptionWebhook.json'),
@@ -68,6 +38,8 @@ describe('Twitch Webhook Service', () => {
                 )
             );
 
+            // Set a test reward title with a specific token amount
+            payload.event.reward.title = '7 Smash Factory Tokens';
             const req = { body: { event: payload.event } };
             const res = {
                 status: jest.fn().mockReturnThis(),
@@ -75,29 +47,61 @@ describe('Twitch Webhook Service', () => {
                 send: jest.fn()
             };
 
-            // First call - should create token
+            await handleChannelPointRedemption(req, res);
+
+            const { user_id, broadcaster_user_id } = payload.event;
+            const tokens = await Token.find({
+                viewerId: user_id,
+                streamerId: broadcaster_user_id,
+                platform: "twitch",
+                source: "channel_points",
+                sourceEventId: payload.event.id
+            });
+
+            expect(tokens.length).toBe(7);
+            expect(tokens[0].source).toBe('channel_points');
+            expect(tokens[0].sourceEventId).toBe(payload.event.id);
+            expect(res.status).toHaveBeenCalledWith(200);
+        });
+
+        it('does not create duplicate tokens for the same event ID and reward title', async () => {
+            const payload = JSON.parse(
+                fs.readFileSync(
+                    path.join(__dirname, './__fixtures__/channelPointRedemptionWebhook.json'),
+                    'utf8'
+                )
+            );
+            payload.event.reward.title = '3 Smash Factory Token';
+            const req = { body: { event: payload.event } };
+            const res = {
+                status: jest.fn().mockReturnThis(),
+                json: jest.fn(),
+                send: jest.fn()
+            };
+
+            // First call - should create 3 tokens
             await handleChannelPointRedemption(req, res);
             expect(res.status).toHaveBeenCalledWith(200);
 
-            // Reset mock functions
             res.status.mockClear();
 
-            // Second call with same event ID - should not create duplicate
+            // Second call with same event ID - should not create more tokens
             await handleChannelPointRedemption(req, res);
             expect(res.status).toHaveBeenCalledWith(200);
 
-            // Verify only one token exists
+            // Verify only 3 tokens exist
             const tokens = await Token.find({
                 viewerId: payload.event.user_id,
                 streamerId: payload.event.broadcaster_user_id,
-                sourceEventId: payload.event.id
+                sourceEventId: payload.event.id,
+                source: 'channel_points',
             });
-            expect(tokens.length).toBe(1);
+            expect(tokens.length).toBe(3);
         });
     });
 
     describe('handleBitsTransactionCreate', () => {
-        it('creates a token for the user and responds with success', async () => {
+        it('creates the correct number of tokens for the user based on the sku and responds with success', async () => {
             const payload = JSON.parse(
                 fs.readFileSync(
                     path.join(__dirname, './__fixtures__/extensionBitsCreateWebhook.json'),
@@ -105,6 +109,8 @@ describe('Twitch Webhook Service', () => {
                 )
             );
 
+            // Set a test SKU with a specific token amount
+            payload.event.product.sku = 'sf_token_5';
             const req = { body: { event: payload.event } };
             const res = {
                 status: jest.fn().mockReturnThis(),
@@ -115,26 +121,28 @@ describe('Twitch Webhook Service', () => {
             await handleBitsTransactionCreate(req, res);
 
             const { user_id, broadcaster_user_id } = payload.event;
-            const token = await Token.findOne({
+            const tokens = await Token.find({
                 viewerId: user_id,
                 streamerId: broadcaster_user_id,
                 platform: "twitch",
+                source: "bits",
+                sourceEventId: payload.event.id
             });
 
-            expect(token).toBeTruthy();
-            expect(token.source).toBe('bits');
-            expect(token.sourceEventId).toBe(payload.event.id);
+            expect(tokens.length).toBe(5);
+            expect(tokens[0].source).toBe('bits');
+            expect(tokens[0].sourceEventId).toBe(payload.event.id);
             expect(res.status).toHaveBeenCalledWith(200);
         });
 
-        it('does not create duplicate tokens for the same event ID', async () => {
+        it('does not create duplicate tokens for the same event ID and sku', async () => {
             const payload = JSON.parse(
                 fs.readFileSync(
                     path.join(__dirname, './__fixtures__/extensionBitsCreateWebhook.json'),
                     'utf8'
                 )
             );
-
+            payload.event.product.sku = 'sf_token_3';
             const req = { body: { event: payload.event } };
             const res = {
                 status: jest.fn().mockReturnThis(),
@@ -142,24 +150,24 @@ describe('Twitch Webhook Service', () => {
                 send: jest.fn()
             };
 
-            // First call - should create token
+            // First call - should create 3 tokens
             await handleBitsTransactionCreate(req, res);
             expect(res.status).toHaveBeenCalledWith(200);
 
-            // Reset mock functions
             res.status.mockClear();
 
-            // Second call with same event ID - should not create duplicate
+            // Second call with same event ID - should not create more tokens
             await handleBitsTransactionCreate(req, res);
             expect(res.status).toHaveBeenCalledWith(200);
 
-            // Verify only one token exists
+            // Verify only 3 tokens exist
             const tokens = await Token.find({
                 viewerId: payload.event.user_id,
                 streamerId: payload.event.broadcaster_user_id,
-                sourceEventId: payload.event.id
+                sourceEventId: payload.event.id,
+                source: 'bits',
             });
-            expect(tokens.length).toBe(1);
+            expect(tokens.length).toBe(3);
         });
     });
 });

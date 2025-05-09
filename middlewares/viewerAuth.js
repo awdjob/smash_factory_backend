@@ -8,7 +8,6 @@ module.exports = {
     viewerAuthStorage,
     viewerAuth: async (req, _, next) => {
         const rawToken = req.get("Authorization").split("Bearer ")[1]
-
         const { TWITCH_EXTENSION_SECRET } = process.env
         let userToken
         try {
@@ -20,7 +19,7 @@ module.exports = {
             return next(error);
         }
 
-        const { user_id } = userToken
+        const { user_id, user_name } = userToken
 
         if (!user_id) {
             const error = new Error("Invalid User")
@@ -36,6 +35,7 @@ module.exports = {
             const user = await User.create({
                 twitchProfile: {
                     id: user_id,
+                    displayName: user_name
                 }
             })
 
