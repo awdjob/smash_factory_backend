@@ -38,8 +38,14 @@ app.get('/events', async (req, res) => {
   // Send initial connection message
   broadcastEvent(channelId, { message: 'Connected to event stream' });
 
+  // Set up heartbeat
+  const heartbeatInterval = setInterval(() => {
+    res.write(': heartbeat\n\n');
+  }, 5000);
+
   // Remove client on connection close
   req.on('close', () => {
+    clearInterval(heartbeatInterval);
     removeClient(channelId);
     console.log(`Client ${channelId} disconnected`);
   });
