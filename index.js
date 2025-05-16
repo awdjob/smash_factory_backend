@@ -18,7 +18,7 @@ mongoose.connect(DB_URL).then(async () => {
     const client = new tmi.Client({
         options: { debug: true },
         identity: {
-            username: 'AwdJob',
+            username: 'SmashFactoryBot',
             password: `oauth:${process.env.TWITCH_BOT_OAUTH_ACCESS}`
         },
         channels: ['awdjob']
