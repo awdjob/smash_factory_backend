@@ -21,14 +21,14 @@ class TokenService {
         try {
             const tokenData = await RefreshToken.getRefreshToken();
             if (!tokenData) {
-                throw new Error('No refresh token found. Please complete the OAuth flow first.');
+                console.log('No refresh token found. Bot will be ready after OAuth authorization.');
+                return;
             }
 
             await this.refreshAccessToken();
             console.log('Token service initialized successfully');
         } catch (error) {
             console.error('Failed to initialize token service:', error.message);
-            throw error;
         }
     }
 
@@ -186,8 +186,18 @@ class TokenService {
     }
 
     async getValidAccessToken() {
+        // If no token exists yet, throw a specific error
+        if (!this.accessToken) {
+            const tokenData = await RefreshToken.getRefreshToken();
+            if (!tokenData) {
+                throw new Error('Bot not authorized. Please complete the OAuth flow first.');
+            }
+            // If we have a refresh token but no access token, try to refresh
+            await this.refreshAccessToken();
+        }
+
         // If token is expired or about to expire, refresh it
-        if (!this.accessToken || !this.tokenExpiry || Date.now() > (this.tokenExpiry - TOKEN_EXPIRY_BUFFER)) {
+        if (!this.tokenExpiry || Date.now() > (this.tokenExpiry - TOKEN_EXPIRY_BUFFER)) {
             await this.refreshAccessToken();
         }
         return this.accessToken;
