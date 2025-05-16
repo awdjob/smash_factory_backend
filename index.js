@@ -7,26 +7,53 @@ const Token = require("./models/token");
 const tmi = require("tmi.js");
 const { smashItems } = require("./utils/smashRemixUtils");
 const { broadcastEvent } = require("./services/eventService");
+const tokenService = require("./services/twitchChatTokenService");
 
 const PORT = process.env.PORT || 5000;
 const { DB_URL } = process.env
 
-mongoose.connect(DB_URL).then(async () => {
-    app.listen(PORT)
-    console.log(`Server listening on port ${PORT}`)
+async function startServer() {
+    try {
+        await mongoose.connect(DB_URL);
+        console.log('Connected to MongoDB');
 
+        await tokenService.initialize();
+
+        app.listen(PORT);
+        console.log(`Server listening on port ${PORT}`);
+
+        const client = await initializeTwitchClient();
+
+        client.connect().catch(console.error);
+    } catch (error) {
+        console.error('Failed to start server:', error);
+        process.exit(1);
+    }
+}
+
+const initializeTwitchClient = async () => {
+    const accessToken = await tokenService.getValidAccessToken();
+    
     const client = new tmi.Client({
         options: { debug: true },
         identity: {
             username: 'SmashFactoryBot',
-            password: `oauth:${process.env.TWITCH_BOT_OAUTH_ACCESS}`
+            password: `oauth:${accessToken}`
         },
         channels: ['awdjob']
     });
 
-    const streamer = await Streamer.findOne({ "twitchProfile.id": "754383611" })
+    const streamer = await Streamer.findOne({ "twitchProfile.id": "754383611" });
 
-    client.connect().catch(console.error);
+    client.on('disconnected', async (reason) => {
+        if (reason.includes('authentication failed')) {
+            console.log('Token expired, refreshing and reconnecting...');
+            const newToken = await tokenService.refreshAccessToken();
+            client.opts.identity.password = `oauth:${newToken}`;
+            client.connect().catch(console.error);
+        }
+    });
+
     client.on('message', async (channel, tags, message, self) => {
         if (self) return;
 
@@ -118,6 +145,8 @@ mongoose.connect(DB_URL).then(async () => {
                 return client.say(channel, `@${tags.username}, invalid command. use !sf tokens to get your token count, or !sf items to get a list of all items.`);
         }
     });
-}).catch(e => {
-    console.log("Mongoose Connection Error:", e)
-})
+
+    return client;
+};
+
+startServer().catch(console.error);
