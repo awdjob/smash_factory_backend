@@ -18,18 +18,21 @@ class TokenService {
     }
 
     async initialize() {
-        try {
-            const tokenData = await RefreshToken.getRefreshToken();
-            if (!tokenData) {
-                console.log('No refresh token found. Bot will be ready after OAuth authorization.');
-                return;
-            }
-
-            await this.refreshAccessToken();
-            console.log('Token service initialized successfully');
-        } catch (error) {
-            console.error('Failed to initialize token service:', error.message);
+        // Clear any existing timeouts
+        if (this.refreshTimeout) {
+            clearTimeout(this.refreshTimeout);
         }
+        if (this.retryTimeout) {
+            clearTimeout(this.retryTimeout);
+        }
+        
+        // Reset state
+        this.accessToken = null;
+        this.tokenExpiry = null;
+        this.refreshPromise = null;
+        this.retryCount = 0;
+        
+        console.log('Token service initialized. Bot will be ready after OAuth authorization.');
     }
 
     handleOAuthCallback = async (req, res) => {
@@ -186,20 +189,32 @@ class TokenService {
     }
 
     async getValidAccessToken() {
-        // If no token exists yet, throw a specific error
+        // If no token exists yet, check if we have a refresh token
         if (!this.accessToken) {
             const tokenData = await RefreshToken.getRefreshToken();
             if (!tokenData) {
-                throw new Error('Bot not authorized. Please complete the OAuth flow first.');
+                console.log('Bot needs authorization. Please complete the OAuth flow.');
+                return;
             }
             // If we have a refresh token but no access token, try to refresh
-            await this.refreshAccessToken();
+            try {
+                await this.refreshAccessToken();
+            } catch (error) {
+                console.error('Failed to refresh access token:', error.message);
+                return;
+            }
         }
 
-        // If token is expired or about to expire, refresh it
+        // If token is expired or about to expire, try to refresh
         if (!this.tokenExpiry || Date.now() > (this.tokenExpiry - TOKEN_EXPIRY_BUFFER)) {
-            await this.refreshAccessToken();
+            try {
+                await this.refreshAccessToken();
+            } catch (error) {
+                console.error('Failed to refresh expired token:', error.message);
+                return;
+            }
         }
+
         return this.accessToken;
     }
 
