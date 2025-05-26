@@ -25,26 +25,25 @@ class TokenService {
         if (this.retryTimeout) {
             clearTimeout(this.retryTimeout);
         }
-        
+
         // Reset state
         this.accessToken = null;
         this.tokenExpiry = null;
         this.refreshPromise = null;
         this.retryCount = 0;
-        
+
         console.log('Token service initialized. Bot will be ready after OAuth authorization.');
     }
 
     handleOAuthCallback = async (req, res) => {
         const { code, error, error_description } = req.query;
-
         // Handle errors from Twitch
         if (error) {
             console.error(`OAuth error: ${error} - ${error_description}`);
             return res.status(400).send(`Authentication error: ${error_description}`);
         }
 
-        // Check if code is present
+        // // Check if code is present
         if (!code) {
             return res.status(400).send('Authorization code missing');
         }
@@ -86,7 +85,7 @@ class TokenService {
 
             res.send('Bot authorized successfully');
         } catch (error) {
-            console.error('Error in OAuth callback:', error.message);
+            console.log('Error in OAuth callback:', error.message);
             if (error.message.includes('Unauthorized')) {
                 res.status(403).send(error.message);
             } else {
@@ -96,21 +95,6 @@ class TokenService {
     }
 
     async refreshAccessToken() {
-        if (this.refreshPromise) {
-            return this.refreshPromise;
-        }
-
-        this.refreshPromise = this._doRefreshAccessToken();
-        try {
-            const result = await this.refreshPromise;
-            this.retryCount = 0;
-            return result;
-        } finally {
-            this.refreshPromise = null;
-        }
-    }
-
-    async _doRefreshAccessToken() {
         try {
             const refreshToken = await RefreshToken.getRefreshToken();
             if (!refreshToken) {
@@ -144,41 +128,6 @@ class TokenService {
             return access_token;
         } catch (error) {
             console.error('Error refreshing Twitch token:', error.message);
-            
-            if (error.response) {
-                switch (error.response.status) {
-                    case 401:
-                        if (error.response.data?.message?.includes('refresh token')) {
-                            console.error('Refresh token is invalid or expired. Please reauthorize the bot.');
-                            try {
-                                await RefreshToken.deleteRefreshToken();
-                            } catch (e) {
-                                console.error('Error cleaning up refresh token:', e.message);
-                            }
-                            throw new Error('Refresh token is invalid or expired. Please complete the OAuth flow again.');
-                        }
-                        throw new Error('Invalid client credentials. Check your client ID and secret.');
-                    case 429:
-                        await this._handleRateLimit();
-                        return this.refreshAccessToken();
-                    default:
-                        throw error;
-                }
-            }
-
-            if (this.retryCount < MAX_RETRY_ATTEMPTS) {
-                this.retryCount++;
-                const delay = INITIAL_RETRY_DELAY * Math.pow(2, this.retryCount - 1);
-                console.log(`Retrying token refresh in ${delay}ms (attempt ${this.retryCount}/${MAX_RETRY_ATTEMPTS})`);
-                
-                await new Promise(resolve => {
-                    this.retryTimeout = setTimeout(resolve, delay);
-                });
-                
-                return this.refreshAccessToken();
-            }
-
-            throw new Error('Max retry attempts reached for token refresh');
         }
     }
 
@@ -219,22 +168,23 @@ class TokenService {
     }
 
     _scheduleNextRefresh(expiresIn) {
-        // Clear any existing refresh timeout
         if (this.refreshTimeout) {
             clearTimeout(this.refreshTimeout);
         }
 
         // Schedule refresh slightly before token expires
         const refreshDelay = (expiresIn * 1000) - TOKEN_EXPIRY_BUFFER;
-        this.refreshTimeout = setTimeout(async () => {
-            try {
-                await this.refreshAccessToken();
-            } catch (error) {
-                console.error('Scheduled token refresh failed:', error.message);
-            }
-        }, refreshDelay);
+        this.refreshTimeout = setTimeout(async () => { await this._nextRefreshCallback(); }, refreshDelay);
 
         console.log(`Next token refresh scheduled in ${refreshDelay / 1000} seconds`);
+    }
+
+    async _nextRefreshCallback() {
+        try {
+            await this.refreshAccessToken();
+        } catch (error) {
+            console.error('Scheduled token refresh failed:', error.message);
+        }
     }
 }
 
