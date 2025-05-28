@@ -9,6 +9,7 @@ const twitchWebhookController = require('./controllers/twitchWebhookController')
 const { broadcastEvent, addClient, removeClient } = require('./services/eventService');
 const Streamer = require('./models/streamer');
 const tokenService = require('./services/twitchChatTokenService');
+const itemsController = require('./controllers/itemsController');
 
 const app = express();
 app.use(cors());
@@ -56,6 +57,7 @@ app.get('/events', async (req, res) => {
 
 app.get('/auth', tokenService.handleOAuthCallback);
 app.post('/webhook/twitch', twitchWebhookController.process);
+app.get('/items', itemsController.get);
 
 if (process.env.NODE_ENV === 'test') {
     app.get('/viewer_test', (req, res) => {
