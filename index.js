@@ -1,14 +1,14 @@
 require('dotenv').config();
+require('module-alias/register');
 const app = require("./server");
 const mongoose = require("mongoose");
 const Viewer = require("./models/viewer");
 const Streamer = require("./models/streamer");
 const Token = require("./models/token");
 const tmi = require("tmi.js");
-const { smashItems } = require("./utils/smashRemixUtils");
 const { broadcastEvent } = require("./services/eventService");
 const tokenService = require("./services/twitchChatTokenService");
-require('module-alias/register');
+const StreamerItem = require("./models/streamerItem");
 
 const PORT = process.env.PORT || 5000;
 const { DB_URL } = process.env
@@ -34,7 +34,7 @@ async function startServer() {
 
 const initializeTwitchClient = async () => {
     const accessToken = await tokenService.getValidAccessToken();
-    
+
     const client = new tmi.Client({
         options: { debug: true },
         identity: {
@@ -79,6 +79,10 @@ const initializeTwitchClient = async () => {
 
                 return client.say(channel, `@${tags.username}, you have ${tokens} tokens! Use channel points to buy more, or use !sf {itemId} {xCoord} to spawn an item. use !sf items to get a list of all items.`)
             case '!sf items':
+                const smashItems = await StreamerItem.find({
+                    streamerId: streamer.twitchProfile.id,
+                    enabled: true,
+                })
                 const header = "Name:ID:Tokens";
                 const rows = smashItems.map(item => `${item.name}:${item.id}:${item.tier}`);
                 const itemMessage = [header, ...rows].join(" | ");
@@ -114,28 +118,31 @@ const initializeTwitchClient = async () => {
                     const itemId = parseInt(match[1], 10);
                     const xCoord = parseInt(match[2], 10);
 
-                    // Find the item by id
-                    const item = smashItems.find(item => item.id === itemId);
-                    if (!item) {
+                    const smashItem = await StreamerItem.findOne({
+                        streamerId: streamer.twitchProfile.id,
+                        enabled: true,
+                        masterItemId: itemId
+                    })
+                    if (!smashItem) {
                         return client.say(channel, `@${tags.username}, invalid item ID.`);
                     }
 
-                    const userTokens = await Token.countDocuments({ 
-                        viewerId: viewer.twitchProfile.id, 
+                    const tokensToRedeem = await Token.find({
+                        viewerId: viewer.twitchProfile.id,
                         streamerId: streamer.twitchProfile.id,
                         redeemedAt: null
-                    });
-                    if (userTokens < item.tier) {
-                        return client.say(channel, `@${tags.username}, you need ${item.tier} tokens to spawn ${item.name}, but you only have ${userTokens}.`);
+                    }).limit(smashItem.price);
+
+                    if (tokensToRedeem.length < smashItem.price) {
+                        return client.say(channel, `@${tags.username}, you need ${smashItem.price} tokens to spawn ${smashItem.name}, but you only have ${tokensToRedeem.length}.`);
                     }
 
-                    const tokensToRemove = await Token.find({ 
-                        viewerId: viewer.twitchProfile.id, 
-                        streamerId: streamer.twitchProfile.id, 
-                        redeemedAt: null 
-                    }).limit(item.tier);
-                    const tokenIdsToRemove = tokensToRemove.map(token => token._id);
-                    await Token.deleteMany({ _id: { $in: tokenIdsToRemove } });
+                    const tokenIdsToRedeem = tokensToRedeem.map(token => token._id);
+                    await Token.updateMany({
+                        _id: {
+                            $in: tokenIdsToRedeem
+                        }
+                    }, { $set: { redeemedAt: new Date(), redeemedFor: smashItem.masterItemId } });
 
                     broadcastEvent(streamer.channelId, {
                         type: 'spawn_item',
