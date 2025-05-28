@@ -152,7 +152,7 @@ const initializeTwitchClient = async () => {
                         }
                     });
 
-                    return client.say(channel, `@${tags.username}, spawning ${item.name} (ID: ${item.id}) at X: ${xCoord}! (${item.tier} tokens deducted)`);
+                    return client.say(channel, `@${tags.username}, spawning ${smashItem.name} (ID: ${smashItem.itemId}) at X: ${xCoord}! (${smashItem.price} tokens deducted)`);
                 }
 
                 // If not a recognized pattern, show help
