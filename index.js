@@ -121,6 +121,9 @@ const initializeTwitchClient = async () => {
                         enabled: true,
                         masterItemId: itemId
                     })
+                    const masterItem = await MasterItem.findOne({
+                        itemId: itemId
+                    })
                     if (!smashItem) {
                         return client.say(channel, `@${tags.username}, invalid item ID.`);
                     }
@@ -132,7 +135,7 @@ const initializeTwitchClient = async () => {
                     }).limit(smashItem.price);
 
                     if (tokensToRedeem.length < smashItem.price) {
-                        return client.say(channel, `@${tags.username}, you need ${smashItem.price} tokens to spawn ${smashItem.name}, but you only have ${tokensToRedeem.length}.`);
+                        return client.say(channel, `@${tags.username}, you need ${smashItem.price} tokens to spawn ${masterItem.name}, but you only have ${tokensToRedeem.length}.`);
                     }
 
                     const tokenIdsToRedeem = tokensToRedeem.map(token => token._id);
@@ -152,7 +155,7 @@ const initializeTwitchClient = async () => {
                         }
                     });
 
-                    return client.say(channel, `@${tags.username}, spawning ${smashItem.name} (ID: ${smashItem.itemId}) at X: ${xCoord}! (${smashItem.price} tokens deducted)`);
+                    return client.say(channel, `@${tags.username}, spawning ${masterItem.name} (ID: ${smashItem.masterItemId}) at X: ${xCoord}! (${smashItem.price} tokens deducted)`);
                 }
 
                 // If not a recognized pattern, show help
