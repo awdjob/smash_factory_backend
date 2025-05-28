@@ -8,6 +8,7 @@ const tmi = require("tmi.js");
 const { smashItems } = require("./utils/smashRemixUtils");
 const { broadcastEvent } = require("./services/eventService");
 const tokenService = require("./services/twitchChatTokenService");
+require('module-alias/register');
 
 const PORT = process.env.PORT || 5000;
 const { DB_URL } = process.env
@@ -74,7 +75,7 @@ const initializeTwitchClient = async () => {
 
         switch (message.toLowerCase()) {
             case '!sf tokens':
-                let tokens = await Token.countDocuments({ viewerId: viewer.twitchProfile.id, streamerId: streamer.twitchProfile.id })
+                let tokens = await Token.countDocuments({ viewerId: viewer.twitchProfile.id, streamerId: streamer.twitchProfile.id, redeemedAt: null })
 
                 return client.say(channel, `@${tags.username}, you have ${tokens} tokens! Use channel points to buy more, or use !sf {itemId} {xCoord} to spawn an item. use !sf items to get a list of all items.`)
             case '!sf items':
@@ -119,12 +120,20 @@ const initializeTwitchClient = async () => {
                         return client.say(channel, `@${tags.username}, invalid item ID.`);
                     }
 
-                    const userTokens = await Token.countDocuments({ viewerId: viewer.twitchProfile.id, streamerId: streamer.twitchProfile.id });
+                    const userTokens = await Token.countDocuments({ 
+                        viewerId: viewer.twitchProfile.id, 
+                        streamerId: streamer.twitchProfile.id,
+                        redeemedAt: null
+                    });
                     if (userTokens < item.tier) {
                         return client.say(channel, `@${tags.username}, you need ${item.tier} tokens to spawn ${item.name}, but you only have ${userTokens}.`);
                     }
 
-                    const tokensToRemove = await Token.find({ viewerId: viewer.twitchProfile.id, streamerId: streamer.twitchProfile.id }).limit(item.tier);
+                    const tokensToRemove = await Token.find({ 
+                        viewerId: viewer.twitchProfile.id, 
+                        streamerId: streamer.twitchProfile.id, 
+                        redeemedAt: null 
+                    }).limit(item.tier);
                     const tokenIdsToRemove = tokensToRemove.map(token => token._id);
                     await Token.deleteMany({ _id: { $in: tokenIdsToRemove } });
 
