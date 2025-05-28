@@ -9,6 +9,7 @@ const tmi = require("tmi.js");
 const { broadcastEvent } = require("./services/eventService");
 const tokenService = require("./services/twitchChatTokenService");
 const StreamerItem = require("./models/streamerItem");
+const MasterItem = require("./models/masterItem");
 const itemService = require("./services/itemService");
 
 const PORT = process.env.PORT || 5000;
