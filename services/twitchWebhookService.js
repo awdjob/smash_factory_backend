@@ -49,7 +49,7 @@ module.exports = {
   },
   handleBitsTransactionCreate: async (req, res) => {
     const getTokenAmountFromSku = (sku) => {
-      const match = sku.match(/sf_token_(\d+)/);
+      const match = sku.match(/(\d+)_tokens/);
       return match ? parseInt(match[1], 10) : 1;
     }
 
@@ -58,7 +58,7 @@ module.exports = {
       const userId = event.user_id;
       const streamerId = event.broadcaster_user_id;
 
-      if (!event.product.sku.match(/sf_token_(\d+)/)) {
+      if (!event.product.sku.match(/(\d+)_tokens/)) {
         return res.status(400).send('Invalid reward title');
       }
 
