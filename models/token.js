@@ -21,6 +21,9 @@ const tokenSchema = mongoose.Schema({
         type: String,
         required: true,
     },
+    redeemedFor: {
+        type: String,
+    },
     redeemedAt: {
         type: Date,
     },
