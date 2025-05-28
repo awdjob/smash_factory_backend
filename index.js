@@ -9,6 +9,7 @@ const tmi = require("tmi.js");
 const { broadcastEvent } = require("./services/eventService");
 const tokenService = require("./services/twitchChatTokenService");
 const StreamerItem = require("./models/streamerItem");
+const itemService = require("./services/itemService");
 
 const PORT = process.env.PORT || 5000;
 const { DB_URL } = process.env
@@ -79,12 +80,9 @@ const initializeTwitchClient = async () => {
 
                 return client.say(channel, `@${tags.username}, you have ${tokens} tokens! Use channel points to buy more, or use !sf {itemId} {xCoord} to spawn an item. use !sf items to get a list of all items.`)
             case '!sf items':
-                const smashItems = await StreamerItem.find({
-                    streamerId: streamer.twitchProfile.id,
-                    enabled: true,
-                })
+                const smashItems = await itemService.getEnabledItemsForStreamer(streamer.twitchProfile.id);
                 const header = "Name:ID:Tokens";
-                const rows = smashItems.map(item => `${item.name}:${item.id}:${item.tier}`);
+                const rows = smashItems.map(item => `${item.name}:${item.itemId}:${item.price}`);
                 const itemMessage = [header, ...rows].join(" | ");
                 const fullMessage = `@${tags.username}, items: ${itemMessage}`;
 
