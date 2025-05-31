@@ -49,12 +49,12 @@ const initializeTwitchClient = async () => {
     const streamer = await Streamer.findOne({ "twitchProfile.id": "754383611" });
 
     client.on('disconnected', async (reason) => {
-        if (reason.includes('authentication failed')) {
-            console.log('Token expired, refreshing and reconnecting...');
-            const newToken = await tokenService.refreshAccessToken();
-            client.opts.identity.password = `oauth:${newToken}`;
-            client.connect().catch(console.error);
-        }
+        // if (reason.includes('authentication failed')) {
+        //     console.log('Token expired, refreshing and reconnecting...');
+        //     const newToken = await tokenService.refreshAccessToken();
+        //     client.opts.identity.password = `oauth:${newToken}`;
+        //     client.connect().catch(console.error);
+        // }
     });
 
     client.on('message', async (channel, tags, message, self) => {
