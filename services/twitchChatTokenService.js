@@ -39,6 +39,7 @@ class TokenService {
         const { code, error, error_description } = req.query;
         // Handle errors from Twitch
         if (error) {
+            console.log("ERROR:", error);
             console.error(`OAuth error: ${error} - ${error_description}`);
             return res.status(400).send(`Authentication error: ${error_description}`);
         }
