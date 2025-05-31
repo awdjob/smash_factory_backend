@@ -8,18 +8,18 @@ module.exports = {
     viewerAuthStorage,
     viewerAuth: async (req, _, next) => {
         const rawToken = req.get("Authorization").split("Bearer ")[1]
-        const { TWITCH_EXTENSION_SECRET } = process.env
-        let userToken
+        const { TWITCH_CLIENT_SECRET } = process.env
+        let viewerToken
         try {
-            const secret = Buffer.from(TWITCH_EXTENSION_SECRET, 'base64');
-            userToken = jwt.verify(rawToken, secret);
+            const secret = Buffer.from(TWITCH_CLIENT_SECRET, 'base64');
+            viewerToken = jwt.verify(rawToken, secret);
         } catch (e) {
             const error = new Error("Invalid Access Token");
             error.status = 400;
             return next(error);
         }
 
-        const { user_id, user_name } = userToken
+        const { user_id, user_name } = viewerToken
 
         if (!user_id) {
             const error = new Error("Invalid User")
