@@ -39,7 +39,6 @@ class TokenService {
         const { code, error, error_description } = req.query;
         // Handle errors from Twitch
         if (error) {
-            console.log("ERROR:", error);
             console.error(`OAuth error: ${error} - ${error_description}`);
             return res.status(400).send(`Authentication error: ${error_description}`);
         }
@@ -86,7 +85,7 @@ class TokenService {
 
             res.send('Bot authorized successfully');
         } catch (error) {
-            console.log('Error in OAuth callback:', error.message);
+            console.log('Error in OAuth callback:', error.message, "ERROR:", error);
             if (error.message.includes('Unauthorized')) {
                 res.status(403).send(error.message);
             } else {

@@ -20,7 +20,7 @@ beforeEach(async () => {
     const masterItems = await createMasterItems();
     await createStreamerItems(streamer.twitchProfile.id, masterItems);
 
-    process.env = { ...originalEnv, TWITCH_CLIENT_SECRET: 'test-secret' };
+    process.env = { ...originalEnv, TWITCH_EXTENSION_SECRET: 'test-secret' };
 });
 
 afterEach(async () => {
@@ -31,7 +31,7 @@ afterEach(async () => {
 
 describe('ItemsController', () => {
     it('should return enabled items for a streamer', async () => {
-        const secret = Buffer.from(process.env.TWITCH_CLIENT_SECRET, 'base64');
+        const secret = Buffer.from(process.env.TWITCH_EXTENSION_SECRET, 'base64');
         const validToken = jwt.sign({ user_id: viewer.twitchProfile.id }, secret);
 
         const response = await request(app)

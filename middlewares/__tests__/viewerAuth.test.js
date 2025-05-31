@@ -8,7 +8,7 @@ const originalEnv = process.env;
 
 beforeEach(async () => {
     await dbConnect();
-    process.env = { ...originalEnv, TWITCH_CLIENT_SECRET: 'test-secret' };
+    process.env = { ...originalEnv, TWITCH_EXTENSION_SECRET: 'test-secret' };
 });
 
 afterEach(async () => {
@@ -27,7 +27,7 @@ describe('ViewerAuth Middleware', () => {
             }
         };
         // Decode the base64 secret before using it to sign
-        const secret = Buffer.from(process.env.TWITCH_CLIENT_SECRET, 'base64');
+        const secret = Buffer.from(process.env.TWITCH_EXTENSION_SECRET, 'base64');
         validToken = jwt.sign({ user_id: '12345' }, secret);
     });
     

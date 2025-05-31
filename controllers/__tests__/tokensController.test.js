@@ -11,7 +11,7 @@ beforeEach(async () => {
     await dbConnect();
 
     // The secret should be base64 encoded as provided by Twitch
-    process.env = { ...originalEnv, TWITCH_CLIENT_SECRET: 'test-secret' }; // base64 encoded 'test-secret'
+    process.env = { ...originalEnv, TWITCH_EXTENSION_SECRET: 'test-secret' }; // base64 encoded 'test-secret'
 }); 
 
 afterEach(async () => {
@@ -29,7 +29,7 @@ describe('TokensController', () => {
         }
 
         // Decode the base64 secret before using it to sign
-        const secret = Buffer.from(process.env.TWITCH_CLIENT_SECRET, 'base64');
+        const secret = Buffer.from(process.env.TWITCH_EXTENSION_SECRET, 'base64');
         const validToken = jwt.sign({ user_id: '12345' }, secret);
 
         const createdUser = await User.create(user);
