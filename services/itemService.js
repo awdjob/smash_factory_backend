@@ -1,4 +1,5 @@
 const MasterItem = require('../models/masterItem');
+const StreamerItem = require('../models/streamerItem');
 
 class ItemService {
 	/**
@@ -7,38 +8,41 @@ class ItemService {
 	 * @returns {Promise<Array>} Array of enabled items with streamer-specific pricing
 	 */
 	async getEnabledItemsForStreamer(streamerId) {
-		return await MasterItem.aggregate([
-			{ $match: { enabled: true } },
-			{
-				$lookup: {
-					from: 'streameritems',
-					let: { masterItemId: '$itemId' },
-					pipeline: [
-						{
-							$match: {
-								$expr: {
-									$and: [
-										{ $eq: ['$masterItemId', '$$masterItemId'] },
-										{ $eq: ['$streamerId', streamerId] },
-										{ $eq: ['$enabled', true] }
-									]
-								}
-							}
-						}
-					],
-					as: 'streamerItems'
-				}
-			},
-			{
-				$project: {
-					_id: 0,
-					itemId: 1,
-					name: 1,
-					price: { $ifNull: [{ $arrayElemAt: ['$streamerItems.price', 0] }, null] },
-					enabled: { $ifNull: [{ $arrayElemAt: ['$streamerItems.enabled', 0] }, false] }
-				}
+		const masterItems = await MasterItem.find({ enabled: true })
+		const streamerItems = await StreamerItem.find({ streamerId })
+
+		const items = masterItems.map(masterItem => {
+			const streamerItem = streamerItems.find(item => item.masterItemId === masterItem.itemId)
+			return {
+				itemId: masterItem.itemId,
+				name: masterItem.name,
+				price: streamerItem ? streamerItem.price : masterItem.defaultPrice,
+				enabled: streamerItem ? streamerItem.enabled : false
 			}
-		]);
+		}).sort((a, b) => a.itemId - b.itemId)
+
+		return items
+	}
+
+	async createDefaultStreamerItems(streamerId) {
+		const enabledMasterItems = await MasterItem.find({ enabled: true })
+			.select('itemId defaultPrice')
+			.lean();
+
+		const streamerItems = enabledMasterItems.map(masterItem => ({
+			streamerId,
+			masterItemId: masterItem.itemId,
+			enabled: true,
+			price: masterItem.defaultPrice,
+			createdAt: new Date(),
+			updatedAt: new Date()
+		}));
+
+		if (streamerItems.length > 0) {
+			await StreamerItem.insertMany(streamerItems);
+		}
+
+		return streamerItems;
 	}
 }
 

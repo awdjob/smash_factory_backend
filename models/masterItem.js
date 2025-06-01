@@ -13,6 +13,11 @@ const masterItemSchema = new mongoose.Schema({
     itemId: {
         type: Number,
         required: true
+    },
+    defaultPrice: {
+        type: Number,
+        default: null,
+        required: true
     }
 }, {
     timestamps: true
