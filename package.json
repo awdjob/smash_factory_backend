@@ -20,5 +20,12 @@
     "mongoose": "^8.14.1",
     "supertest": "^7.1.0",
     "tmi.js": "^1.8.5"
+  },
+  "_moduleAliases": {
+    "@models": "models",
+    "@services": "services",
+    "@root": ".",
+    "@controllers": "controllers",
+    "@middlewares": "middlewares"
   }
 }
