@@ -13,17 +13,28 @@ const { createStreamerItems } = require('@models/__fixtures__/streamerItem.fixtu
 const { broadcastEvent } = require('@root/services/eventService');
 
 // Mock the broadcast service
-jest.mock('@root/services/eventService', () => ({
-    broadcastEvent: jest.fn()
-}));
+jest.mock('@root/services/eventService', () => {
+    const clients = new Map();
+    return {
+        broadcastEvent: jest.fn(),
+        clients
+    };
+});
+
+
+const { clients } = require('@root/services/eventService');
 
 describe('TokensController', () => {
     const originalEnv = process.env;
+
+    let streamer, viewer;
     beforeEach(async () => {
         await dbConnect();
-
         process.env = { ...originalEnv, TWITCH_EXTENSION_SECRET: 'test-secret' };
 
+        viewer = await createViewer();
+        streamer = await createStreamer();
+        clients.set(streamer.channelId, { write: jest.fn() });
     });
 
     afterEach(async () => {
@@ -34,12 +45,10 @@ describe('TokensController', () => {
         // Clean up fake timers
         jest.useRealTimers();
         jest.clearAllMocks();
+        clients.clear();
     });
     describe('GET /tokens', () => {
         it('should get tokens for current viewer', async () => {
-            const viewer = await createViewer();
-            const streamer = await createStreamer();
-
             // Decode the base64 secret before using it to sign
             const secret = Buffer.from(process.env.TWITCH_EXTENSION_SECRET, 'base64');
             const validToken = jwt.sign({ user_id: viewer.twitchProfile.id }, secret);
@@ -65,11 +74,6 @@ describe('TokensController', () => {
         })
 
         it('should handle when streamerId is not provided', async () => {
-            const streamer = await createStreamer();
-            const viewer = await createViewer();
-            const masterItems = await createMasterItems();
-            await createStreamerItems(streamer._id, masterItems);
-
             const secret = Buffer.from(process.env.TWITCH_EXTENSION_SECRET, 'base64');
             const validToken = jwt.sign({ user_id: viewer.twitchProfile.id }, secret);
 
@@ -93,13 +97,12 @@ describe('TokensController', () => {
     })
 
     describe('POST /redeem', () => {
-        let streamer, viewer, masterItems, streamerItems;
+        let masterItems, streamerItems;
 
         beforeEach(async () => {
-            streamer = await createStreamer();
-            viewer = await createViewer();
             masterItems = await createMasterItems();
             streamerItems = await createStreamerItems(streamer._id, masterItems);
+            clients.set(streamer.channelId, { write: jest.fn() });
         });
 
         it('should redeem tokens for an item and broadcast event with exact timestamp if streamer has items enabled', async () => {
@@ -249,6 +252,43 @@ describe('TokensController', () => {
 
             expect(response.status).toBe(400);
             expect(response.body.error).toBe('Items are currently disabled for this streamer');
+        });
+
+        it('should handle when the streamer is not in the clients map', async () => {
+            const secret = Buffer.from(process.env.TWITCH_EXTENSION_SECRET, 'base64');
+            const validToken = jwt.sign({ user_id: viewer.twitchProfile.id, user_name: viewer.twitchProfile.displayName }, secret);
+
+            streamer.itemsEnabled = true;
+            streamer.channelId = 'non_existent_channel_id';
+            await streamer.save();
+
+            const tokens = await Promise.all([
+                Token.create({
+                    viewerId: viewer.twitchProfile.id,
+                    streamerId: streamer.twitchProfile.id,
+                    platform: "twitch",
+                    source: "channel_points",
+                    sourceEventId: "12345",
+                    redeemedAt: null
+                })
+            ]);
+
+            const tokenIds = tokens.map(t => t._id);
+            const itemId = streamerItems[0].masterItemId;
+
+            const response = await request(app)
+                .post('/redeem')
+                .set('Authorization', `Bearer ${validToken}`)
+                .set('X-Auth-Source', 'extension')
+                .send({
+                    streamerId: streamer.twitchProfile.id,
+                    itemId,
+                    tokenIds,
+                    xCoord: 0
+                });
+
+            expect(response.status).toBe(400);
+            expect(response.body.error).toBe('Streamer is not connected to Smash Factory client');
         });
     })
 })

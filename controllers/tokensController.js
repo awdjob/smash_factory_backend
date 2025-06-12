@@ -1,6 +1,6 @@
 const Token = require("@models/token")
 const { getCurrentViewer } = require("@root/middlewares/viewerAuth")
-const { broadcastEvent } = require("@services/eventService")
+const { broadcastEvent, clients } = require("@services/eventService")
 const Streamer = require("@models/streamer")
 const StreamerItem = require("@models/streamerItem")
 const MasterItem = require("@models/masterItem")
@@ -30,6 +30,10 @@ module.exports = {
 
         if (!streamer) {
             return res.status(400).json({ error: 'Streamer not found' })
+        }
+
+        if (!clients.has(streamer.channelId)) {
+            return res.status(400).json({ error: 'Streamer is not connected to Smash Factory client' })
         }
 
         const item = await StreamerItem.findOne({
