@@ -7,10 +7,9 @@ module.exports = {
 
         let streamer;
         try {
-            streamer = await Streamer.findByIdAndUpdate(streamerId, { itemsEnabled }, { new: true });
+            streamer = await Streamer.findByIdAndUpdate({ "twitchProfile.id": streamerId }, { itemsEnabled }, { new: true });
         } catch (e) {
-            res.status(400).json({ message: 'Failed to update streamer' });
-            console.error("ERROR UPDATING STREAMER:", e);
+            res.status(400).json({ message: e.message });
         }
 
         res.status(200).json(streamer);
