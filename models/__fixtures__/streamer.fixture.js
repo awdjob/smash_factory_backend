@@ -6,7 +6,8 @@ module.exports = {
             twitchProfile: {
                 id: '67890',
                 displayName: 'Testicles'
-            }
+            },
+            itemsEnabled: true
         });
     }
 }

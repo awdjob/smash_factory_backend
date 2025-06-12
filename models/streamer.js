@@ -3,21 +3,25 @@ const crypto = require('crypto');
 
 const twitchProfileSchema = mongoose.Schema({
   id: {
-      type: String,
-      required: true,
-      index: true,
-      unique: true
+    type: String,
+    required: true,
+    index: true,
+    unique: true
   },
   displayName: {
-      type: String,
-      required: true
-  }
+    type: String,
+    required: true
+  },
 })
 
 const streamerSchema = new mongoose.Schema({
   twitchProfile: {
     type: twitchProfileSchema,
     required: true
+  },
+  itemsEnabled: {
+    type: Boolean,
+    default: false,
   },
   channelId: {
     type: String,

@@ -1,8 +1,9 @@
-const Token = require("../models/token")
-const { getCurrentViewer } = require("../middlewares/viewerAuth")
-const { broadcastEvent } = require("../services/eventService")
-const Streamer = require("../models/streamer")
-const StreamerItem = require("../models/streamerItem")
+const Token = require("@models/token")
+const { getCurrentViewer } = require("@root/middlewares/viewerAuth")
+const { broadcastEvent } = require("@services/eventService")
+const Streamer = require("@models/streamer")
+const StreamerItem = require("@models/streamerItem")
+const MasterItem = require("@models/masterItem")
 
 module.exports = {
     get: async (req, res) => {
@@ -25,23 +26,30 @@ module.exports = {
     redeem: async (req, res) => {
         const { tokenIds, itemId, streamerId, xCoord } = req.body
         const tokens = await Token.find({ _id: { $in: tokenIds }, redeemedAt: null })
-        const item = await StreamerItem.findOne({
-            masterItemId: itemId,
-            streamerId: streamerId,
-            enabled: true
-        })
         const streamer = await Streamer.findOne({ "twitchProfile.id": streamerId })
 
-        if (tokens.length < item.price) {
-            return res.status(400).json({ error: `Not enough tokens. You need ${item.price} tokens to spawn ${item.name}` })
+        if (!streamer) {
+            return res.status(400).json({ error: 'Streamer not found' })
         }
+
+        const item = await StreamerItem.findOne({
+            masterItemId: itemId,
+            streamerId: streamer._id,
+            enabled: true
+        })
 
         if (!item) {
             return res.status(400).json({ error: 'Item not found' })
         }
 
-        if (!streamer) {
-            return res.status(400).json({ error: 'Streamer not found' })
+        const masterItem = await MasterItem.findOne({ itemId })        
+
+        if (!streamer.itemsEnabled) {
+            return res.status(400).json({ error: 'Items are currently disabled for this streamer' })
+        }
+
+        if (tokens.length < item.price) {
+            return res.status(400).json({ error: `Not enough tokens. You need ${item.price} tokens to spawn ${masterItem.name}` })
         }
 
         await Token.updateMany({
