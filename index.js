@@ -118,7 +118,7 @@ const initializeTwitchClient = async () => {
                     const xCoord = parseInt(match[2], 10);
 
                     const smashItem = await StreamerItem.findOne({
-                        streamerId: streamer.twitchProfile.id,
+                        streamerId: streamer._id,
                         enabled: true,
                         masterItemId: itemId
                     })
