@@ -130,7 +130,7 @@ const initializeTwitchClient = async () => {
                     }
 
                     const tokensToRedeem = await Token.find({
-                        viewerId: viewer.twitchProfile.id,
+                        viewerId: viewer._id,
                         streamerId: streamer._id,
                         redeemedAt: null
                     }).limit(smashItem.price);
