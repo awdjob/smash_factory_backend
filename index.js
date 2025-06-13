@@ -77,7 +77,7 @@ const initializeTwitchClient = async () => {
 
         switch (message.toLowerCase()) {
             case '!sf tokens':
-                let tokens = await Token.countDocuments({ viewerId: viewer.twitchProfile.id, streamerId: streamer.twitchProfile.id, redeemedAt: null })
+                let tokens = await Token.countDocuments({ viewerId: viewer._id, streamerId: streamer._id, redeemedAt: null })
 
                 return client.say(channel, `@${tags.username}, you have ${tokens} tokens! Use channel points to buy more, or use !sf {itemId} {xCoord} to spawn an item. use !sf items to get a list of all items.`)
             case '!sf items':
