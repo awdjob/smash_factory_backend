@@ -81,7 +81,7 @@ const initializeTwitchClient = async () => {
 
                 return client.say(channel, `@${tags.username}, you have ${tokens} tokens! Use channel points to buy more, or use !sf {itemId} {xCoord} to spawn an item. use !sf items to get a list of all items.`)
             case '!sf items':
-                const smashItems = await itemService.getEnabledItemsForStreamer(streamer.twitchProfile.id);
+                const smashItems = await itemService.getEnabledItemsForStreamer(streamer._id);
                 const header = "Name:ID:Tokens";
                 const rows = smashItems.map(item => `${item.name}:${item.itemId}:${item.price}`);
                 const itemMessage = [header, ...rows].join(" | ");
@@ -131,7 +131,7 @@ const initializeTwitchClient = async () => {
 
                     const tokensToRedeem = await Token.find({
                         viewerId: viewer.twitchProfile.id,
-                        streamerId: streamer.twitchProfile.id,
+                        streamerId: streamer._id,
                         redeemedAt: null
                     }).limit(smashItem.price);
 
