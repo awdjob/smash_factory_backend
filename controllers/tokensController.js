@@ -20,7 +20,7 @@ module.exports = {
         }
 
         const tokens = await Token.find({
-            viewerId: currentViewer.twitchProfile.id,
+            viewerId: currentViewer._id,
             streamerId: streamer._id,
             platform: "twitch",
             redeemedAt: null,
