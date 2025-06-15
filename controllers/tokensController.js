@@ -14,9 +14,14 @@ module.exports = {
             return res.status(400).json({ error: 'streamerId is required' })
         }
 
+        const streamer = await Streamer.findOne({ "twitchProfile.id": streamerId })
+        if (!streamer) {
+            return res.status(400).json({ error: 'Streamer not found' })
+        }
+
         const tokens = await Token.find({
             viewerId: currentViewer.twitchProfile.id,
-            streamerId: streamerId,
+            streamerId: streamer._id,
             platform: "twitch",
             redeemedAt: null,
         })
