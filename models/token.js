@@ -27,7 +27,7 @@ const tokenSchema = mongoose.Schema({
     redeemedAt: {
         type: Date,
     },
-})
+}, { timestamps: true })
 
 const Token = mongoose.model("Token", tokenSchema)
 
