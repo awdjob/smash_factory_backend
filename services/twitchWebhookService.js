@@ -1,4 +1,6 @@
 const Token = require('../models/token');
+const Viewer = require('../models/viewer');
+const Streamer = require('../models/streamer');
 
 module.exports = {
   handleChannelPointRedemption: async (req, res) => {
@@ -16,9 +18,22 @@ module.exports = {
         return res.status(400).send('Invalid reward title');
       }
 
+      const viewer = await Viewer.findOne({ "twitchProfile.id": userId })
+      const streamer = await Streamer.findOne({ "twitchProfile.id": streamerId })
+
+      if (!viewer) {
+        console.error(`Viewer not found for userId: ${userId}`);
+        return res.status(400).json();
+      }
+
+      if (!streamer) {
+        console.error(`Streamer not found for streamerId: ${streamerId}`);
+        return res.status(400).json();
+      }
+
       const existingTokens = await Token.countDocuments({
-        viewerId: userId,
-        streamerId,
+        viewerId: viewer._id,
+        streamerId: streamer._id,
         platform: "twitch",
         source: "channel_points",
         sourceEventId: event.id,
@@ -26,20 +41,23 @@ module.exports = {
 
       if (existingTokens >= tokenAmount) {
         // Already have enough tokens for this event
+        console.log(`Already have enough tokens for this event: ${existingTokens} >= ${tokenAmount}`);
         return res.status(200).json();
       }
 
       // Create only the missing tokens
       const tokensToCreate = tokenAmount - existingTokens;
       const tokens = Array.from({ length: tokensToCreate }).map(() => ({
-        viewerId: userId,
-        streamerId,
+        viewerId: viewer._id,
+        streamerId: streamer._id,
         platform: "twitch",
         source: "channel_points",
         sourceEventId: event.id,
       }));
 
       await Token.insertMany(tokens);
+
+      console.log(`Created ${tokensToCreate} tokens for event: ${event.id}`);
 
       return res.status(200).json();
     } catch (err) {
@@ -62,11 +80,24 @@ module.exports = {
         return res.status(400).send('Invalid reward title');
       }
 
+      const viewer = await Viewer.findOne({ "twitchProfile.id": userId })
+      const streamer = await Streamer.findOne({ "twitchProfile.id": streamerId })
+
+      if (!viewer) {
+        console.error(`Viewer not found for userId: ${userId}`);
+        return res.status(400).json();
+      }
+
+      if (!streamer) {
+        console.error(`Streamer not found for streamerId: ${streamerId}`);
+        return res.status(400).json();
+      }
+
       const tokenAmount = getTokenAmountFromSku(event.product.sku);
 
       const existingTokens = await Token.countDocuments({
-        viewerId: userId,
-        streamerId,
+        viewerId: viewer._id,
+        streamerId: streamer._id,
         platform: "twitch",
         source: "bits",
         sourceEventId: event.id,
@@ -80,8 +111,8 @@ module.exports = {
       // Create only the missing tokens
       const tokensToCreate = tokenAmount - existingTokens;
       const tokens = Array.from({ length: tokensToCreate }).map(() => ({
-        viewerId: userId,
-        streamerId,
+        viewerId: viewer._id,
+        streamerId: streamer._id,
         platform: "twitch",
         source: "bits",
         sourceEventId: event.id,
