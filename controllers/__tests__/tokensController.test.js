@@ -54,8 +54,8 @@ describe('TokensController', () => {
             const validToken = jwt.sign({ user_id: viewer.twitchProfile.id }, secret);
 
             await Token.create({
-                viewerId: viewer.twitchProfile.id,
-                streamerId: streamer.twitchProfile.id,
+                viewerId: viewer._id,
+                streamerId: streamer._id,
                 platform: "twitch",
                 source: "channel_points",
                 sourceEventId: "12345",
@@ -69,7 +69,7 @@ describe('TokensController', () => {
 
             expect(response.status).toBe(200);
             expect(response.body.length).toBe(1);
-            expect(response.body[0].streamerId).toBe('67890');
+            expect(response.body[0].streamerId).toBe(streamer._id.toString());
             expect(response.body[0].redeemedAt).toBeNull();
         })
 
@@ -78,8 +78,8 @@ describe('TokensController', () => {
             const validToken = jwt.sign({ user_id: viewer.twitchProfile.id }, secret);
 
             await Token.create({
-                viewerId: viewer.twitchProfile.id,
-                streamerId: streamer.twitchProfile.id,
+                viewerId: viewer._id,
+                streamerId: streamer._id,
                 platform: "twitch",
                 source: "channel_points",
                 sourceEventId: "12345",
@@ -96,7 +96,7 @@ describe('TokensController', () => {
         });
     })
 
-    describe('POST /redeem', () => {
+    describe('POST /tokens/redeem', () => {
         let masterItems, streamerItems;
 
         beforeEach(async () => {
@@ -114,7 +114,7 @@ describe('TokensController', () => {
 
             const tokens = await Promise.all([
                 Token.create({
-                    viewerId: viewer.twitchProfile.id,
+                    viewerId: viewer._id,
                     streamerId: streamer.twitchProfile.id,
                     platform: "twitch",
                     source: "channel_points",
@@ -122,7 +122,7 @@ describe('TokensController', () => {
                     redeemedAt: null
                 }),
                 Token.create({
-                    viewerId: viewer.twitchProfile.id,
+                    viewerId: viewer._id,
                     streamerId: streamer.twitchProfile.id,
                     platform: "twitch",
                     source: "channel_points",
@@ -143,7 +143,7 @@ describe('TokensController', () => {
             })
 
             const response = await request(app)
-                .post('/redeem')
+                .post('/tokens/redeem')
                 .set('Authorization', `Bearer ${validToken}`)
                 .set('X-Auth-Source', 'extension')
                 .send({
@@ -181,7 +181,7 @@ describe('TokensController', () => {
             const validToken = jwt.sign({ user_id: viewer.twitchProfile.id, user_name: viewer.twitchProfile.displayName }, secret);
 
             const response = await request(app)
-                .post('/redeem')
+                .post('/tokens/redeem')
                 .set('Authorization', `Bearer ${validToken}`)
                 .set('X-Auth-Source', 'extension')
                 .send({
@@ -202,7 +202,7 @@ describe('TokensController', () => {
             const validToken = jwt.sign({ user_id: viewer.twitchProfile.id, user_name: viewer.twitchProfile.displayName }, secret);
 
             const response = await request(app)
-                .post('/redeem')
+                .post('/tokens/redeem')
                 .set('Authorization', `Bearer ${validToken}`)
                 .set('X-Auth-Source', 'extension')
                 .send({
@@ -221,7 +221,7 @@ describe('TokensController', () => {
             const validToken = jwt.sign({ user_id: viewer.twitchProfile.id, user_name: viewer.twitchProfile.displayName }, secret);
 
             const response = await request(app)
-                .post('/redeem')
+                .post('/tokens/redeem')
                 .set('Authorization', `Bearer ${validToken}`)
                 .set('X-Auth-Source', 'extension')
                 .send({
@@ -240,7 +240,7 @@ describe('TokensController', () => {
             await streamer.save();
 
             const response = await request(app)
-                .post('/redeem')
+                .post('/tokens/redeem')
                 .set('Authorization', `Bearer ${validToken}`)
                 .set('X-Auth-Source', 'extension')
                 .send({
@@ -277,7 +277,7 @@ describe('TokensController', () => {
             const itemId = streamerItems[0].masterItemId;
 
             const response = await request(app)
-                .post('/redeem')
+                .post('/tokens/redeem')
                 .set('Authorization', `Bearer ${validToken}`)
                 .set('X-Auth-Source', 'extension')
                 .send({

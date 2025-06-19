@@ -1,12 +1,14 @@
-const request = require('supertest');
-const app = require('../../server'); // Adjust if your express app is elsewhere
-const Token = require('../../models/token'); // Adjust path as needed
-const { dbConnect, dbDisconnect } = require('../../mongoTestConfig');
+const Token = require('@models/token');
+const { dbConnect, dbDisconnect } = require('@root/mongoTestConfig');
 const fs = require('fs');
 const path = require('path');
 const { handleChannelPointRedemption, handleBitsTransactionCreate } = require('../twitchWebhookService');
+const { createViewer } = require('@models/__fixtures__/viewer.fixture');
+const { createStreamer } = require('@models/__fixtures__/streamer.fixture');
 
 describe('Twitch Webhook Service', () => {
+    let viewer, streamer;
+
     beforeEach(async () => {
         await dbConnect();
     });
@@ -16,6 +18,17 @@ describe('Twitch Webhook Service', () => {
     });
 
     describe('handleChannelPointRedemption', () => {
+        const payload = JSON.parse(
+            fs.readFileSync(
+                path.join(__dirname, './__fixtures__/channelPointRedemptionWebhook.json'),
+                'utf8'
+            )
+        );
+        beforeEach(async () => {
+            viewer = await createViewer({ twitchProfile: { id: payload.event.user_id, displayName: 'Testie' } });
+            streamer = await createStreamer({ twitchProfile: { id: payload.event.broadcaster_user_id, displayName: 'TestStreamer' } });
+        });
+
         it('responds with 400 for invalid reward title', async () => {
             const req = { body: { event: { reward: { title: 'Not a valid reward' } } } };
             const res = {
@@ -31,13 +44,6 @@ describe('Twitch Webhook Service', () => {
         });
 
         it('creates the correct number of tokens for the user based on the reward title and responds with success', async () => {
-            const payload = JSON.parse(
-                fs.readFileSync(
-                    path.join(__dirname, './__fixtures__/channelPointRedemptionWebhook.json'),
-                    'utf8'
-                )
-            );
-
             // Set a test reward title with a specific token amount
             payload.event.reward.title = '7 Smash Factory Tokens';
             const req = { body: { event: payload.event } };
@@ -49,10 +55,9 @@ describe('Twitch Webhook Service', () => {
 
             await handleChannelPointRedemption(req, res);
 
-            const { user_id, broadcaster_user_id } = payload.event;
             const tokens = await Token.find({
-                viewerId: user_id,
-                streamerId: broadcaster_user_id,
+                viewerId: viewer._id,
+                streamerId: streamer._id,
                 platform: "twitch",
                 source: "channel_points",
                 sourceEventId: payload.event.id
@@ -65,12 +70,6 @@ describe('Twitch Webhook Service', () => {
         });
 
         it('does not create duplicate tokens for the same event ID and reward title', async () => {
-            const payload = JSON.parse(
-                fs.readFileSync(
-                    path.join(__dirname, './__fixtures__/channelPointRedemptionWebhook.json'),
-                    'utf8'
-                )
-            );
             payload.event.reward.title = '3 Smash Factory Token';
             const req = { body: { event: payload.event } };
             const res = {
@@ -79,7 +78,6 @@ describe('Twitch Webhook Service', () => {
                 send: jest.fn()
             };
 
-            // First call - should create 3 tokens
             await handleChannelPointRedemption(req, res);
             expect(res.status).toHaveBeenCalledWith(200);
 
@@ -89,10 +87,9 @@ describe('Twitch Webhook Service', () => {
             await handleChannelPointRedemption(req, res);
             expect(res.status).toHaveBeenCalledWith(200);
 
-            // Verify only 3 tokens exist
             const tokens = await Token.find({
-                viewerId: payload.event.user_id,
-                streamerId: payload.event.broadcaster_user_id,
+                viewerId: viewer._id,
+                streamerId: streamer._id,
                 sourceEventId: payload.event.id,
                 source: 'channel_points',
             });
@@ -101,16 +98,21 @@ describe('Twitch Webhook Service', () => {
     });
 
     describe('handleBitsTransactionCreate', () => {
-        it('creates the correct number of tokens for the user based on the sku and responds with success', async () => {
-            const payload = JSON.parse(
-                fs.readFileSync(
-                    path.join(__dirname, './__fixtures__/extensionBitsCreateWebhook.json'),
-                    'utf8'
-                )
-            );
+        const payload = JSON.parse(
+            fs.readFileSync(
+                path.join(__dirname, './__fixtures__/extensionBitsCreateWebhook.json'),
+                'utf8'
+            )
+        );
 
+        beforeEach(async () => {
+            viewer = await createViewer({ twitchProfile: { id: payload.event.user_id, displayName: 'Testie' } });
+            streamer = await createStreamer({ twitchProfile: { id: payload.event.broadcaster_user_id, displayName: 'TestStreamer' } });
+        });
+
+        it('creates the correct number of tokens for the user based on the sku and responds with success', async () => {
             // Set a test SKU with a specific token amount
-            payload.event.product.sku = 'sf_token_5';
+            payload.event.product.sku = '5_tokens';
             const req = { body: { event: payload.event } };
             const res = {
                 status: jest.fn().mockReturnThis(),
@@ -120,10 +122,9 @@ describe('Twitch Webhook Service', () => {
 
             await handleBitsTransactionCreate(req, res);
 
-            const { user_id, broadcaster_user_id } = payload.event;
             const tokens = await Token.find({
-                viewerId: user_id,
-                streamerId: broadcaster_user_id,
+                viewerId: viewer._id,
+                streamerId: streamer._id,
                 platform: "twitch",
                 source: "bits",
                 sourceEventId: payload.event.id
@@ -136,13 +137,7 @@ describe('Twitch Webhook Service', () => {
         });
 
         it('does not create duplicate tokens for the same event ID and sku', async () => {
-            const payload = JSON.parse(
-                fs.readFileSync(
-                    path.join(__dirname, './__fixtures__/extensionBitsCreateWebhook.json'),
-                    'utf8'
-                )
-            );
-            payload.event.product.sku = 'sf_token_3';
+            payload.event.product.sku = '3_tokens';
             const req = { body: { event: payload.event } };
             const res = {
                 status: jest.fn().mockReturnThis(),
@@ -162,8 +157,8 @@ describe('Twitch Webhook Service', () => {
 
             // Verify only 3 tokens exist
             const tokens = await Token.find({
-                viewerId: payload.event.user_id,
-                streamerId: payload.event.broadcaster_user_id,
+                viewerId: viewer._id,
+                streamerId: streamer._id,
                 sourceEventId: payload.event.id,
                 source: 'bits',
             });

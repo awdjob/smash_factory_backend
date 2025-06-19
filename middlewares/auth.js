@@ -1,13 +1,15 @@
 const { viewerAuth } = require("./viewerAuth")
 const { streamerAuth } = require("./streamerAuth")
 
+const WHITELISTED_PATHS = ["/auth", "/webhook/twitch", "/signup", "/signin", "/events"]
+
 module.exports = async (req, _, next) => {
+    console.log("REQ: ", req.path)
     if (req.get("X-Auth-Source") === "extension") {
         await viewerAuth(req, _, next)
-    } else if (req.get("X-Auth-Source") === "client" || req.path.includes("/events")) {
-        // await streamerAuth(req, _, next)
-        next()
-    } else if (req.path.includes("/auth") || req.path.includes("/webhook/twitch") || req.path.includes("/signup")) {
+    } else if (req.get("X-Auth-Source") === "client") {
+        await streamerAuth(req, _, next)
+    } else if (WHITELISTED_PATHS.includes(req.path)) {
         next()
     } else {
         const error = new Error("Invalid Auth Source")

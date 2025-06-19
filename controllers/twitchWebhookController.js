@@ -3,18 +3,15 @@ const { createHmac } = require('crypto');
 
 module.exports = {
     process: async (req, res) => {
-        // Check if this is a verification request (EventSub sends challenge in body)
         if (req.body && req.body.challenge && req.headers['twitch-eventsub-message-type'] === 'webhook_callback_verification') {
             return res.status(200).send(req.body.challenge);
         }
 
-        // For actual notifications, verify signature
         const signature = req.headers['twitch-eventsub-message-signature'];
         const messageId = req.headers['twitch-eventsub-message-id'];
         const timestamp = req.headers['twitch-eventsub-message-timestamp'];
         const body = JSON.stringify(req.body);
 
-        // Only verify signature if we have a secret and this is a real notification
         if (process.env.TWITCH_WEBHOOK_SECRET &&
             signature && messageId && timestamp &&
             req.headers['twitch-eventsub-message-type'] === 'notification') {

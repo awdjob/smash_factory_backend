@@ -12,6 +12,10 @@ const twitchProfileSchema = mongoose.Schema({
     type: String,
     required: true
   },
+  channelPointRewardCreated: {
+    type: Boolean,
+    default: false
+  }
 })
 
 const streamerSchema = new mongoose.Schema({

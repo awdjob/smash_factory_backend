@@ -1,8 +1,7 @@
-## Client off/unavailable functionality
- - add a column on streamer for "itemsEnabled"
- - check if itemsEnabled is toggled on/off for a streamer and respond appropriately in the controller when trying to redeem token
-
-
 NEXT STEPS:
 
-finish getting tokensControllerTest all passing - currently getting an error on the one uncommented out test for the redeem block for items not being enabled but we are setting it to enabled? not sure what the shit is going on there
+- get the twitchsignupservice tested along with signupcontroller
+- have our jwt expire the same time that the refresh token expires (or figure out what we need to do here exactly)
+- test oauth flow manually
+- make sure the channel point gets created (I have a feeling this isn't going to work so figure this out first)
+- update SF client to force sign in to twitch, as well as being able to know if the sign in flow needs to happen again because the jwt expired

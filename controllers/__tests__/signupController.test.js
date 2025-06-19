@@ -1,5 +1,4 @@
 const request = require('supertest');
-const mongoose = require('mongoose');
 const { dbConnect, dbDisconnect } = require('@root/mongoTestConfig');
 const jwt = require('jsonwebtoken');
 const app = require('@root/server');
@@ -31,15 +30,16 @@ describe('Signups Controller', () => {
         return jwt.sign(mockTwitchUser, secret);
     };
 
-    describe('POST /signups', () => {
+    describe('POST /signup', () => {
         it('should create a new streamer with valid token', async () => {
             const validToken = generateValidToken();
 
             const response = await request(app)
-                .post('/signups')
+                .post('/signup')
                 .send({ token: validToken });
 
             expect(response.status).toBe(200);
+            expect(response.body.message).toBe("Streamer created");
 
             const streamer = await Streamer.findOne({
                 'twitchProfile.id': mockTwitchUser.user_id
@@ -50,20 +50,20 @@ describe('Signups Controller', () => {
 
         it('should return 400 when token is missing', async () => {
             const response = await request(app)
-                .post('/signups')
+                .post('/signup')
                 .send({});
 
             expect(response.status).toBe(400);
-            expect(response.body.message).toBe('Token is required');
+            expect(response.body.message).toBe('JWT is required');
         });
 
         it('should return 400 when token is invalid', async () => {
             const response = await request(app)
-                .post('/signups')
+                .post('/signup')
                 .send({ token: 'invalid-token' });
 
             expect(response.status).toBe(400);
-            expect(response.body.message).toBe('Invalid Access Token');
+            expect(response.body.message).toBe('Invalid JWT');
         });
 
         it('should return 400 when token is missing user_id', async () => {
@@ -71,14 +71,14 @@ describe('Signups Controller', () => {
             const invalidToken = jwt.sign({ user_name: 'test' }, secret);
 
             const response = await request(app)
-                .post('/signups')
+                .post('/signup')
                 .send({ token: invalidToken });
 
             expect(response.status).toBe(400);
             expect(response.body.message).toBe('Invalid User');
         });
 
-        it('should return 400 when streamer already exists', async () => {
+        it('should return 200 when streamer already exists', async () => {
             await Streamer.create({
                 twitchProfile: {
                     id: mockTwitchUser.user_id,
@@ -89,10 +89,10 @@ describe('Signups Controller', () => {
             const validToken = generateValidToken();
 
             const response = await request(app)
-                .post('/signups')
+                .post('/signup')
                 .send({ token: validToken });
 
-            expect(response.status).toBe(400);
+            expect(response.status).toBe(200);
             expect(response.body.message).toBe('Streamer already exists');
         });
     });

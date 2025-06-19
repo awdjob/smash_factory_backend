@@ -1,17 +1,22 @@
-const Streamer = require('../models/streamer');
+const { getCurrentStreamer } = require('@middlewares/streamerAuth');
 
 module.exports = {
     put: async (req, res) => {
-        const { streamerId } = req.query;
         const { itemsEnabled } = req.body;
+        if (!itemsEnabled) {
+            res.status(400).json({ message: "itemsEnabled is required" });
+            return;
+        }
 
-        let streamer;
+        const streamer = getCurrentStreamer();
+
         try {
-            streamer = await Streamer.findByIdAndUpdate({ "twitchProfile.id": streamerId }, { itemsEnabled }, { new: true });
+            streamer.itemsEnabled = itemsEnabled;
+            await streamer.save();
         } catch (e) {
             res.status(400).json({ message: e.message });
         }
 
-        res.status(200).json(streamer);
+        res.status(200).json();
     }
 }
