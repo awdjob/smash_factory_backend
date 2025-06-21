@@ -25,7 +25,8 @@ module.exports = {
                 });
 
                 if (!oauthRes.ok) {
-                    console.log('HTTP error! status: ', oauthRes.body)
+                    const body = await oauthRes.json()
+                    console.log('HTTP error! status: ', body)
                     throw new Error(`HTTP error! status: ${oauthRes.status}`);
                 }
 
