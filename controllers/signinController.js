@@ -25,6 +25,7 @@ module.exports = {
                 });
 
                 if (!oauthRes.ok) {
+                    console.log('HTTP error! status: ', oauthRes.body)
                     throw new Error(`HTTP error! status: ${oauthRes.status}`);
                 }
 
@@ -39,7 +40,6 @@ module.exports = {
                 }
 
                 if (!streamer.channelPointRewardCreated) {
-
                     try {
                         const reward = await twitchStreamerService.createCustomReward(access_token, userInfo.id)
                         await twitchStreamerService.createSubscription(access_token, 'channel.points_custom_reward_redemption.add', userInfo.id, { reward_id: reward.id })
