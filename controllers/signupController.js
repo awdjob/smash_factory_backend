@@ -4,10 +4,14 @@ const twitchStreamerService = require('@services/twitchStreamerService');
 
 module.exports = {
     post: async (req, res) => {
-        const { token } = req.body;
+        const { token, displayName } = req.body;
 
         if (!token) {
             return res.status(400).json({ message: "JWT is required" });
+        }
+
+        if (!displayName) {
+            return res.status(400).json({ message: "Display name is required" });
         }
 
         const secret = Buffer.from(process.env.TWITCH_EXTENSION_SECRET, 'base64');
@@ -18,9 +22,9 @@ module.exports = {
             return res.status(400).json({ message: "Invalid JWT" });
         }
 
-        const { user_id, user_name } = streamerToken;
+        const { user_id } = streamerToken;
 
-        if (!user_id || !user_name) {
+        if (!user_id) {
             return res.status(400).json({ message: "Invalid User" });
         }
 
@@ -30,7 +34,7 @@ module.exports = {
             return res.status(200).json({ message: "Streamer already exists" });
         }
 
-        await twitchStreamerService.createStreamer({ id: user_id, displayName: user_name });
+        await twitchStreamerService.createStreamerWithDefaultItems({ id: user_id, displayName });
 
         return res.status(200).json({ message: "Streamer created" });
     }

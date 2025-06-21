@@ -8,6 +8,10 @@ module.exports = {
 
         const streamer = await Streamer.findOne({ "twitchProfile.id": streamerId });
 
+        if (!streamer) {
+            return res.status(404).json({ message: "Streamer not found" });
+        }
+
         const enabledItems = await itemService.getEnabledItemsForStreamer(streamer._id);
 
         res.status(200).json(enabledItems);

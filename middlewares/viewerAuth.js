@@ -8,6 +8,7 @@ module.exports = {
     viewerAuthStorage,
     viewerAuth: async (req, _, next) => {
         const rawToken = req.get("Authorization").split("Bearer ")[1]
+        const { displayName } = req.query
 
         let viewerToken
         try {
@@ -19,7 +20,7 @@ module.exports = {
             return next(error);
         }
 
-        const { user_id, user_name } = viewerToken
+        const { user_id } = viewerToken
 
         if (!user_id) {
             const error = new Error("Invalid User")
@@ -29,13 +30,17 @@ module.exports = {
 
         const user = await User.findOne({ "twitchProfile.id": user_id })
         if (user) {
+            if (displayName && (!user.twitchProfile.displayName || user.twitchProfile.displayName !== displayName)) {
+                user.twitchProfile.displayName = displayName
+                await user.save()
+            }
             viewerAuthStorage.enterWith(user)
             next()
         } else {
             const user = await User.create({
                 twitchProfile: {
                     id: user_id,
-                    displayName: user_name
+                    displayName
                 }
             })
 

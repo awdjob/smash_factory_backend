@@ -8,8 +8,7 @@ const twitchProfileSchema = mongoose.Schema({
         unique: true
     },
     displayName: {
-        type: String,
-        required: true
+        type: String
     }
 })
 
