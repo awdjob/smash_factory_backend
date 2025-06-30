@@ -1,6 +1,9 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const path = require('path');
+const fs = require('fs');
+
 const authMiddleware = require('./middlewares/auth');
 const { getCurrentViewer } = require('./middlewares/viewerAuth');
 const { getCurrentStreamer } = require('./middlewares/streamerAuth');
@@ -28,6 +31,9 @@ app.post('/webhook/twitch', twitchWebhookController.process);
 app.get('/items', itemsController.get);
 app.post('/signup', signupController.post);
 app.get('/signin', signinController.get);
+app.get('/privacy-policy', (req, res) => {
+  res.sendFile(path.join(__dirname, 'static', 'privacy-policy.html'));
+});
 
 if (process.env.NODE_ENV === 'test') {
   app.get('/viewer_test', (req, res) => {
