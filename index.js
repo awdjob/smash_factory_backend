@@ -80,30 +80,30 @@ const initializeTwitchClient = async () => {
                 let tokens = await Token.countDocuments({ viewerId: viewer._id, streamerId: streamer._id, redeemedAt: null })
 
                 return client.say(channel, `@${tags.username}, you have ${tokens} tokens! Use channel points to buy more, or use !sf {itemId} {xCoord} to spawn an item. use !sf items to get a list of all items.`)
-            case '!sf items':
-                const smashItems = await itemService.getEnabledItemsForStreamer(streamer._id);
-                const header = "Name:ID:Tokens";
-                const rows = smashItems.map(item => `${item.name}:${item.itemId}:${item.price}`);
-                const itemMessage = [header, ...rows].join(" | ");
-                const fullMessage = `@${tags.username}, items: ${itemMessage}`;
+            // case '!sf items':
+            //     const smashItems = await itemService.getEnabledItemsForStreamer(streamer._id);
+            //     const header = "Name:ID:Tokens";
+            //     const rows = smashItems.map(item => `${item.name}:${item.itemId}:${item.price}`);
+            //     const itemMessage = [header, ...rows].join(" | ");
+            //     const fullMessage = `@${tags.username}, items: ${itemMessage}`;
 
-                // Twitch chat message limit is 500 characters
-                if (fullMessage.length <= 500) {
-                    client.say(channel, fullMessage);
-                } else {
-                    // If too long, split into multiple messages (optional)
-                    let current = `@${tags.username}, items: `;
-                    for (const row of [header, ...rows]) {
-                        if ((current + row + " | ").length > 500) {
-                            client.say(channel, current);
-                            current = "";
-                        }
-                        current += (current ? " | " : "") + row;
-                    }
-                    if (current) client.say(channel, current);
-                }
+            //     // Twitch chat message limit is 500 characters
+            //     if (fullMessage.length <= 500) {
+            //         client.say(channel, fullMessage);
+            //     } else {
+            //         // If too long, split into multiple messages (optional)
+            //         let current = `@${tags.username}, items: `;
+            //         for (const row of [header, ...rows]) {
+            //             if ((current + row + " | ").length > 500) {
+            //                 client.say(channel, current);
+            //                 current = "";
+            //             }
+            //             current += (current ? " | " : "") + row;
+            //         }
+            //         if (current) client.say(channel, current);
+            //     }
 
-                break;
+            //     break;
             case '!sf':
                 return client.say(
                     channel,
@@ -112,55 +112,55 @@ const initializeTwitchClient = async () => {
             default:
                 // Pattern: !sf {itemId} {xCoord}
                 // Example: !sf 5 100
-                const match = message.match(/^!sf\s+(\d+)\s+(-?\d+)$/i);
-                if (match) {
-                    const itemId = parseInt(match[1], 10);
-                    const xCoord = parseInt(match[2], 10);
+                // const match = message.match(/^!sf\s+(\d+)\s+(-?\d+)$/i);
+                // if (match) {
+                //     const itemId = parseInt(match[1], 10);
+                //     const xCoord = parseInt(match[2], 10);
 
-                    const smashItem = await StreamerItem.findOne({
-                        streamerId: streamer._id,
-                        enabled: true,
-                        masterItemId: itemId
-                    })
-                    const masterItem = await MasterItem.findOne({
-                        itemId: itemId
-                    })
-                    if (!smashItem) {
-                        return client.say(channel, `@${tags.username}, invalid item ID.`);
-                    }
+                //     const smashItem = await StreamerItem.findOne({
+                //         streamerId: streamer._id,
+                //         enabled: true,
+                //         masterItemId: itemId
+                //     })
+                //     const masterItem = await MasterItem.findOne({
+                //         itemId: itemId
+                //     })
+                //     if (!smashItem) {
+                //         return client.say(channel, `@${tags.username}, invalid item ID.`);
+                //     }
 
-                    const tokensToRedeem = await Token.find({
-                        viewerId: viewer._id,
-                        streamerId: streamer._id,
-                        redeemedAt: null
-                    }).limit(smashItem.price);
+                //     const tokensToRedeem = await Token.find({
+                //         viewerId: viewer._id,
+                //         streamerId: streamer._id,
+                //         redeemedAt: null
+                //     }).limit(smashItem.price);
 
-                    if (tokensToRedeem.length < smashItem.price) {
-                        return client.say(channel, `@${tags.username}, you need ${smashItem.price} tokens to spawn ${masterItem.name}, but you only have ${tokensToRedeem.length}.`);
-                    }
+                //     if (tokensToRedeem.length < smashItem.price) {
+                //         return client.say(channel, `@${tags.username}, you need ${smashItem.price} tokens to spawn ${masterItem.name}, but you only have ${tokensToRedeem.length}.`);
+                //     }
 
-                    const tokenIdsToRedeem = tokensToRedeem.map(token => token._id);
-                    await Token.updateMany({
-                        _id: {
-                            $in: tokenIdsToRedeem
-                        }
-                    }, { $set: { redeemedAt: new Date(), redeemedFor: smashItem.masterItemId } });
+                //     const tokenIdsToRedeem = tokensToRedeem.map(token => token._id);
+                //     await Token.updateMany({
+                //         _id: {
+                //             $in: tokenIdsToRedeem
+                //         }
+                //     }, { $set: { redeemedAt: new Date(), redeemedFor: smashItem.masterItemId } });
 
-                    broadcastEvent(streamer.channelId, {
-                        type: 'spawn_item',
-                        data: {
-                            itemId,
-                            coords: {
-                                x: xCoord,
-                            }
-                        }
-                    });
+                //     broadcastEvent(streamer.channelId, {
+                //         type: 'spawn_item',
+                //         data: {
+                //             itemId,
+                //             coords: {
+                //                 x: xCoord,
+                //             }
+                //         }
+                //     });
 
-                    return client.say(channel, `@${tags.username}, spawning ${masterItem.name} (ID: ${smashItem.masterItemId}) at X: ${xCoord}! (${smashItem.price} tokens deducted)`);
-                }
+                //     return client.say(channel, `@${tags.username}, spawning ${masterItem.name} (ID: ${smashItem.masterItemId}) at X: ${xCoord}! (${smashItem.price} tokens deducted)`);
+                // }
 
-                // If not a recognized pattern, show help
-                return client.say(channel, `@${tags.username}, invalid command. use !sf tokens to get your token count, or !sf items to get a list of all items.`);
+                // // If not a recognized pattern, show help
+                // return client.say(channel, `@${tags.username}, invalid command. use !sf tokens to get your token count, or !sf items to get a list of all items.`);
         }
     });
 
