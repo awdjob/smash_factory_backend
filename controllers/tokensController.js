@@ -29,8 +29,9 @@ module.exports = {
         res.status(200).json(tokens)
     },
     redeem: async (req, res) => {
+        const currentViewer = getCurrentViewer()
         const { tokenIds, itemId, streamerId, xCoord } = req.body
-        const tokens = await Token.find({ _id: { $in: tokenIds }, redeemedAt: null })
+        const tokens = await Token.find({ _id: { $in: tokenIds }, viewerId: currentViewer._id, redeemedAt: null })
         const streamer = await Streamer.findOne({ "twitchProfile.id": streamerId })
 
         if (!streamer) {
@@ -74,6 +75,8 @@ module.exports = {
             type: 'spawn_item',
             data: {
                 itemId,
+                itemName: masterItem.name,
+                viewerDisplayName: currentViewer.twitchProfile.displayName,
                 coords: {
                     x: xCoord,
                 }
